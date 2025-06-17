@@ -452,61 +452,90 @@ const EmployeesManager = {
         }
     },
     
-    async addOrUpdateEmployee(employeeData) {
-        const userId = Auth.getUser()?.id;
-        if (!userId) return;
+   // Trova e sostituisci la funzione addOrUpdateEmployee (circa riga 330) con questa versione:
+
+async addOrUpdateEmployee(employeeData) {
+    const userId = Auth.getUser()?.id;
+    if (!userId) return;
+    
+    try {
+        // Prepara i dati per il database
+        const dbEmployee = {
+            user_id: userId,
+            full_name: employeeData.nome,
+            fiscal_code: employeeData.codiceFiscale || null,
+            role: employeeData.qualifica,
+            monthly_hours: employeeData.oreMensiliMedia || employeeData.oreMensili,
+            annual_hours: employeeData.oreAnnualiTotali || employeeData.oreAnnuali,
+            hourly_cost: employeeData.costoOrarioMedio || employeeData.costoOrario,
+            annual_cost: employeeData.costoAnnuale,
+            cost_calculated: employeeData.costoCalcolato || false,
+            monthly_history: employeeData.storicoMensile || {},
+            average_monthly_hours: employeeData.oreMensiliMedia,
+            total_annual_hours: employeeData.oreAnnualiTotali,
+            average_hourly_cost: employeeData.costoOrarioMedio,
+            payslips_count: employeeData.numeroMensilita || 1,
+            first_month: employeeData.primoMese,
+            last_month: employeeData.ultimoMese,
+            is_active: true
+        };
         
-        try {
-            // Controlla se esiste già
-            const { data: existing } = await supabase
+        // Controlla se esiste già - usa nome + codice fiscale per identificare
+        let existingEmployee = null;
+        
+        if (employeeData.codiceFiscale) {
+            // Se abbiamo il CF, cerca per CF
+            const { data } = await supabase
                 .from('employees')
                 .select('id')
                 .eq('user_id', userId)
                 .eq('fiscal_code', employeeData.codiceFiscale)
+                .eq('is_active', true)
                 .single();
             
-            const dbEmployee = {
-                user_id: userId,
-                full_name: employeeData.nome,
-                fiscal_code: employeeData.codiceFiscale,
-                role: employeeData.qualifica,
-                monthly_hours: employeeData.oreMensiliMedia || employeeData.oreMensili,
-                annual_hours: employeeData.oreAnnualiTotali || employeeData.oreAnnuali,
-                hourly_cost: employeeData.costoOrarioMedio || employeeData.costoOrario,
-                annual_cost: employeeData.costoAnnuale,
-                cost_calculated: employeeData.costoCalcolato || false,
-                monthly_history: employeeData.storicoMensile || {},
-                average_monthly_hours: employeeData.oreMensiliMedia,
-                total_annual_hours: employeeData.oreAnnualiTotali,
-                average_hourly_cost: employeeData.costoOrarioMedio,
-                payslips_count: employeeData.numeroMensilita || 1,
-                first_month: employeeData.primoMese,
-                last_month: employeeData.ultimoMese,
-                is_active: true
-            };
+            existingEmployee = data;
+        } else {
+            // Se non abbiamo il CF, cerca per nome esatto
+            const { data } = await supabase
+                .from('employees')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('full_name', employeeData.nome)
+                .eq('is_active', true)
+                .single();
             
-            if (existing) {
-                // Aggiorna
-                const { error } = await supabase
-                    .from('employees')
-                    .update(dbEmployee)
-                    .eq('id', existing.id);
-                
-                if (error) throw error;
-            } else {
-                // Inserisci nuovo
-                const { error } = await supabase
-                    .from('employees')
-                    .insert([dbEmployee]);
-                
-                if (error) throw error;
-            }
-            
-        } catch (error) {
-            console.error('Errore salvataggio dipendente:', error);
-            throw error;
+            existingEmployee = data;
         }
-    },
+        
+        if (existingEmployee) {
+            // Aggiorna dipendente esistente
+            console.log('📝 Aggiornamento dipendente esistente:', employeeData.nome);
+            
+            const { error } = await supabase
+                .from('employees')
+                .update({
+                    ...dbEmployee,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingEmployee.id);
+            
+            if (error) throw error;
+        } else {
+            // Inserisci nuovo dipendente
+            console.log('➕ Inserimento nuovo dipendente:', employeeData.nome);
+            
+            const { error } = await supabase
+                .from('employees')
+                .insert([dbEmployee]);
+            
+            if (error) throw error;
+        }
+        
+    } catch (error) {
+        console.error('Errore salvataggio dipendente:', error);
+        throw error;
+    }
+},
     
     async removeEmployee(id) {
         if (!confirm('Sicuro di voler rimuovere questo dipendente e tutto il suo storico?')) {
