@@ -789,13 +789,13 @@ window.closeModal = function() {
 
 // Inizializzazione quando DOM è pronto
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
         console.log('DOM caricato, avvio app...');
-        App.init();
+        await Auth.init();
     });
 } else {
     console.log('DOM già caricato, avvio app...');
-    App.init();
+    Auth.init();
 }
 
 // Export
