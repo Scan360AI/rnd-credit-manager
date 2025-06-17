@@ -2,6 +2,7 @@
 
 const AIManager = {
     apiKey: null,
+    disabled: false,
     models: {
         flash: 'gemini-1.5-flash',
         vision: 'gemini-1.5-flash'
@@ -32,92 +33,72 @@ const AIManager = {
 
     // Inizializzazione
     async init() {
-        console.log('Inizializzazione AI Manager...');
+        console.log('🤖 Inizializzazione AI Manager...');
         
-        // Carica API key
-        await this.loadApiKey();
+        // Carica configurazione da localStorage
+        this.loadConfiguration();
         
-        // Carica knowledge base e prompts
-        await this.loadKnowledgeBase();
-        await this.loadPrompts();
+        // Carica knowledge base e prompts solo se AI è abilitata
+        if (!this.disabled && this.apiKey) {
+            await this.loadKnowledgeBase();
+            await this.loadPrompts();
+        }
         
         // Reset contatori se nuovo giorno
         this.checkDailyReset();
         
-        return this.apiKey !== null;
+        console.log(`🤖 AI Manager inizializzato - API Key: ${this.apiKey ? 'Configurata' : 'Mancante'}, Modalità: ${this.disabled ? 'Manuale' : 'AI'}`);
+        
+        return this.apiKey !== null && !this.disabled;
     },
 
-    // Carica API key
-    async loadApiKey() {
-        const userId = Auth.getUser()?.id;
-        if (!userId) return;
-
-        try {
-            // Prima controlla nel database
-            const { data, error } = await supabase
-                .from('api_keys')
-                .select('key_encrypted')
-                .eq('user_id', userId)
-                .eq('provider', 'gemini')
-                .eq('is_active', true)
-                .single();
-
-            if (data && data.key_encrypted) {
-                // In produzione dovresti decrittare la chiave
-                this.apiKey = data.key_encrypted;
-            } else {
-                // Fallback su localStorage per retrocompatibilità
-                this.apiKey = localStorage.getItem('gemini_api_key');
-            }
-        } catch (error) {
-            console.error('Errore caricamento API key:', error);
-            this.apiKey = localStorage.getItem('gemini_api_key');
-        }
+    // Carica configurazione da localStorage
+    loadConfiguration() {
+        // Carica API key
+        this.apiKey = localStorage.getItem('gemini_api_key') || null;
+        
+        // Carica stato disabled
+        this.disabled = localStorage.getItem('ai_disabled') === 'true';
+        
+        // Carica contatori
+        this.loadCounters();
+        
+        console.log(`🔑 Configurazione caricata - API Key: ${this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'Non presente'}`);
     },
 
     // Salva API key
     async saveApiKey(apiKey) {
-        const userId = Auth.getUser()?.id;
-        if (!userId) {
-            localStorage.setItem('gemini_api_key', apiKey);
-            this.apiKey = apiKey;
+        if (!apiKey) {
+            localStorage.removeItem('gemini_api_key');
+            this.apiKey = null;
+            console.log('🔑 API Key rimossa');
             return;
         }
-
-        try {
-            // Disattiva chiavi precedenti
-            await supabase
-                .from('api_keys')
-                .update({ is_active: false })
-                .eq('user_id', userId)
-                .eq('provider', 'gemini');
-
-            // Inserisci nuova chiave
-            const { error } = await supabase
-                .from('api_keys')
-                .insert({
-                    user_id: userId,
-                    provider: 'gemini',
-                    key_encrypted: apiKey, // In produzione, critta la chiave
-                    is_active: true
-                });
-
-            if (error) throw error;
-
-            // Salva anche in localStorage per backup
-            localStorage.setItem('gemini_api_key', apiKey);
-            this.apiKey = apiKey;
-
-            showNotification('API Key salvata con successo', 'success');
-        } catch (error) {
-            console.error('Errore salvataggio API key:', error);
-            showNotification('Errore salvataggio API key', 'error');
+        
+        // Salva in localStorage
+        localStorage.setItem('gemini_api_key', apiKey);
+        this.apiKey = apiKey;
+        
+        console.log('🔑 API Key salvata con successo');
+        
+        // Se abbiamo una key valida e AI non è disabilitata, carica le risorse
+        if (!this.disabled) {
+            await this.loadKnowledgeBase();
+            await this.loadPrompts();
         }
+        
+        showNotification('API Key salvata con successo', 'success');
     },
 
     // Carica knowledge base
     async loadKnowledgeBase() {
         try {
+            const userId = Auth.getUser()?.id;
+            if (!userId) {
+                console.log('⚠️ Utente non autenticato, skip knowledge base');
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('knowledge_base')
                 .select('*')
@@ -133,30 +114,47 @@ const AIManager = {
                 this.knowledgeCache.get(item.category).push(item);
             });
 
-            console.log(`Knowledge base caricata: ${data.length} elementi`);
+            console.log(`📚 Knowledge base caricata: ${data.length} elementi`);
         } catch (error) {
             console.error('Errore caricamento knowledge base:', error);
+            // Non è critico, continua comunque
         }
     },
 
     // Carica prompts
     async loadPrompts() {
-        try {
-            const { data, error } = await supabase
-                .from('ai_prompts')
-                .select('*')
-                .eq('is_active', true);
+        // Prompts hardcoded per ora, in futuro dal database
+        this.promptsCache.set('extract_payslip', {
+            name: 'extract_payslip',
+            prompt_template: `Analizza questa busta paga e estrai i seguenti dati in formato JSON:
+{
+  "nome_completo": "Nome e cognome del dipendente",
+  "codice_fiscale": "Codice fiscale",
+  "qualifica": "Qualifica o ruolo",
+  "mese": "MM/YYYY",
+  "ore_mensili": numero ore lavorate nel mese,
+  "retribuzione_lorda": importo lordo mensile,
+  "costo_azienda": costo totale per l'azienda (se presente)
+}
 
-            if (error) throw error;
+Se non trovi un dato, metti null. Rispondi SOLO con il JSON, senza altre spiegazioni.`
+        });
 
-            data.forEach(prompt => {
-                this.promptsCache.set(prompt.name, prompt);
-            });
+        this.promptsCache.set('analyze_invoice', {
+            name: 'analyze_invoice',
+            prompt_template: `Analizza questa fattura e determina se è ammissibile per il credito R&S. Estrai:
+- Fornitore
+- Numero fattura
+- Data
+- Importo totale
+- Descrizione servizi/prodotti
+- È ammissibile per R&S? (true/false)
+- Motivazione ammissibilità
 
-            console.log(`Prompts caricati: ${data.length}`);
-        } catch (error) {
-            console.error('Errore caricamento prompts:', error);
-        }
+Cerca keywords come: ricerca, sviluppo, innovazione, consulenza tecnica, prototipazione, test, analisi.`
+        });
+
+        console.log(`📝 Prompts caricati: ${this.promptsCache.size}`);
     },
 
     // Ottieni prompt
@@ -164,6 +162,10 @@ const AIManager = {
         const promptData = this.promptsCache.get(name);
         if (!promptData) {
             console.warn(`Prompt non trovato: ${name}`);
+            // Fallback su prompt di base
+            if (name === 'extract_payslip') {
+                return this.getDefaultPayslipPrompt();
+            }
             return null;
         }
 
@@ -177,35 +179,25 @@ const AIManager = {
         return prompt;
     },
 
-    // Ottieni knowledge per categoria
-    getKnowledge(category) {
-        return this.knowledgeCache.get(category) || [];
+    // Prompt di default per busta paga
+    getDefaultPayslipPrompt() {
+        return `Analizza questa busta paga e estrai i seguenti dati in formato JSON:
+{
+  "nome_completo": "Nome e cognome del dipendente",
+  "codice_fiscale": "Codice fiscale",
+  "qualifica": "Qualifica o ruolo",
+  "mese": "MM/YYYY",
+  "ore_mensili": numero ore lavorate nel mese,
+  "retribuzione_lorda": importo lordo mensile,
+  "costo_azienda": costo totale per l'azienda (se presente)
+}
+
+Se non trovi un dato, metti null. Rispondi SOLO con il JSON, senza altre spiegazioni.`;
     },
 
-    // Cerca nella knowledge base
-    searchKnowledge(query) {
-        const results = [];
-        
-        this.knowledgeCache.forEach((items, category) => {
-            items.forEach(item => {
-                const score = this.calculateRelevanceScore(query, item);
-                if (score > 0.3) {
-                    results.push({ ...item, score });
-                }
-            });
-        });
-
-        return results.sort((a, b) => b.score - a.score).slice(0, 5);
-    },
-
-    // Calcola score di rilevanza semplice
-    calculateRelevanceScore(query, item) {
-        const queryLower = query.toLowerCase();
-        const titleScore = item.title.toLowerCase().includes(queryLower) ? 0.5 : 0;
-        const contentScore = item.content.toLowerCase().includes(queryLower) ? 0.3 : 0;
-        const tagsScore = item.tags.some(tag => tag.toLowerCase().includes(queryLower)) ? 0.2 : 0;
-        
-        return titleScore + contentScore + tagsScore;
+    // Controlla se AI è disponibile
+    isAvailable() {
+        return this.apiKey !== null && !this.disabled;
     },
 
     // Controlla rate limits
@@ -255,7 +247,8 @@ const AIManager = {
         const data = {
             today: this.requestsToday,
             minute: this.requestsThisMinute,
-            lastMinuteReset: this.lastMinuteReset
+            lastMinuteReset: this.lastMinuteReset,
+            date: new Date().toDateString()
         };
         localStorage.setItem('ai_counters', JSON.stringify(data));
     },
@@ -265,6 +258,16 @@ const AIManager = {
         const saved = localStorage.getItem('ai_counters');
         if (saved) {
             const data = JSON.parse(saved);
+            
+            // Controlla se è un nuovo giorno
+            if (data.date !== new Date().toDateString()) {
+                this.requestsToday = 0;
+                this.requestsThisMinute = 0;
+                this.lastMinuteReset = Date.now();
+                this.saveCounters();
+                return;
+            }
+            
             this.requestsToday = data.today || 0;
             
             if (Date.now() - data.lastMinuteReset > 60000) {
@@ -287,8 +290,6 @@ const AIManager = {
             this.requestsThisMinute = 0;
             localStorage.setItem('ai_last_daily_reset', today);
             this.saveCounters();
-        } else {
-            this.loadCounters();
         }
     },
 
@@ -296,6 +297,10 @@ const AIManager = {
     async callGeminiAPI(endpoint, body) {
         if (!this.apiKey) {
             throw new Error('API Key non configurata');
+        }
+
+        if (this.disabled) {
+            throw new Error('AI disabilitata in modalità manuale');
         }
 
         await this.checkRateLimits();
@@ -316,7 +321,10 @@ const AIManager = {
                 
                 if (response.status === 429) {
                     throw new Error('QUOTA_EXCEEDED');
-                } else if (response.status === 401) {
+                } else if (response.status === 400 && errorData?.error?.message?.includes('API_KEY_INVALID')) {
+                    // API key non valida, rimuovila
+                    this.apiKey = null;
+                    localStorage.removeItem('gemini_api_key');
                     throw new Error('API Key non valida');
                 }
                 
@@ -333,6 +341,10 @@ const AIManager = {
 
     // Estrai dati da busta paga
     async extractPayslipData(fileData, mimeType) {
+        if (!this.isAvailable()) {
+            throw new Error('AI non disponibile');
+        }
+
         const prompt = this.getPrompt('extract_payslip');
         if (!prompt) {
             throw new Error('Prompt non trovato');
@@ -377,291 +389,15 @@ const AIManager = {
         throw new Error('Formato risposta non valido');
     },
 
-    // Analizza documento generico
-    async analyzeDocument(fileData, mimeType, documentType = 'generic') {
-        const prompt = this.getPrompt(`analyze_${documentType}`) || this.getPrompt('analyze_generic');
-        
-        const endpoint = this.endpoints.generateContent.replace('{model}', this.models.vision);
-        
-        const body = {
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    {
-                        inline_data: {
-                            mime_type: mimeType,
-                            data: fileData
-                        }
-                    }
-                ]
-            }],
-            generationConfig: {
-                temperature: 0.3,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2048,
-            }
-        };
-
-        const response = await this.callGeminiAPI(endpoint, body);
-        
-        return response.candidates[0].content.parts[0].text;
-    },
-
-    // Genera contenuto per relazione
-    async generateReportContent(section, projectData) {
-        // Cerca knowledge relevante
-        const relevantKnowledge = this.searchKnowledge(`${section} ${projectData.type}`);
-        
-        // Costruisci contesto
-        let context = '';
-        if (relevantKnowledge.length > 0) {
-            context = '\n\nInformazioni utili dalla knowledge base:\n';
-            relevantKnowledge.forEach(item => {
-                context += `- ${item.title}: ${item.content.substring(0, 200)}...\n`;
-            });
-        }
-
-        const prompt = this.getPrompt(`report_${section}`, {
-            project_name: projectData.name,
-            project_type: projectData.type,
-            context: context
-        });
-
-        if (!prompt) {
-            throw new Error(`Prompt non trovato per sezione: ${section}`);
-        }
-
-        const endpoint = this.endpoints.generateContent.replace('{model}', this.models.flash);
-        
-        const body = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-            }
-        };
-
-        const response = await this.callGeminiAPI(endpoint, body);
-        
-        return response.candidates[0].content.parts[0].text;
-    },
-
-    // Analizza tutti i documenti di un progetto
-    async analyzeProjectDocuments(projectId) {
-        try {
-            showLoading(true);
-            showNotification('Analisi documenti in corso...', 'info');
-
-            // Recupera tutti i documenti del progetto
-            const { data: documents, error } = await supabase
-                .from('documents')
-                .select('*, documents_content(*)')
-                .eq('project_id', projectId)
-                .eq('is_active', true);
-
-            if (error) throw error;
-
-            const analyses = [];
-            
-            for (const doc of documents) {
-                if (doc.documents_content && doc.documents_content.text_content) {
-                    // Usa il contenuto già estratto
-                    analyses.push({
-                        document: doc.file_name,
-                        type: doc.document_type,
-                        content: doc.documents_content.text_content,
-                        summary: doc.documents_content.summary
-                    });
-                } else {
-                    // Analizza il documento
-                    const analysis = await this.analyzeDocument(
-                        doc.file_data,
-                        doc.mime_type,
-                        doc.document_type
-                    );
-                    
-                    analyses.push({
-                        document: doc.file_name,
-                        type: doc.document_type,
-                        content: analysis
-                    });
-
-                    // Salva l'analisi per usi futuri
-                    await this.saveDocumentAnalysis(doc.id, analysis);
-                }
-            }
-
-            return analyses;
-
-        } catch (error) {
-            console.error('Errore analisi documenti:', error);
-            showNotification('Errore durante l\'analisi dei documenti', 'error');
-            throw error;
-        } finally {
-            showLoading(false);
-        }
-    },
-
-    // Salva analisi documento
-    async saveDocumentAnalysis(documentId, analysis) {
-        try {
-            // Genera summary
-            const summary = analysis.substring(0, 500);
-            
-            // Genera embedding per ricerca semantica
-            const embedding = await this.generateEmbedding(analysis);
-
-            const { error } = await supabase
-                .from('documents_content')
-                .upsert({
-                    document_id: documentId,
-                    text_content: analysis,
-                    summary: summary,
-                    embedding: embedding,
-                    extracted_at: new Date().toISOString()
-                });
-
-            if (error) throw error;
-
-        } catch (error) {
-            console.error('Errore salvataggio analisi:', error);
-        }
-    },
-
-    // Genera embedding
-    async generateEmbedding(text) {
-        if (!this.apiKey) return null;
-
-        try {
-            const body = {
-                model: 'models/embedding-001',
-                content: {
-                    parts: [{
-                        text: text.substring(0, 3072) // Limite caratteri
-                    }]
-                }
-            };
-
-            const response = await this.callGeminiAPI(this.endpoints.embedContent, body);
-            
-            return response.embedding.values;
-
-        } catch (error) {
-            console.error('Errore generazione embedding:', error);
-            return null;
-        }
-    },
-
-    // Ricerca semantica
-    async semanticSearch(query, projectId = null) {
-        try {
-            // Genera embedding per la query
-            const queryEmbedding = await this.generateEmbedding(query);
-            if (!queryEmbedding) {
-                throw new Error('Impossibile generare embedding per la query');
-            }
-
-            // Ricerca nel database usando pgvector
-            let searchQuery = supabase
-                .from('documents_content')
-                .select(`
-                    document_id,
-                    text_content,
-                    summary,
-                    documents!inner(
-                        id,
-                        file_name,
-                        document_type,
-                        project_id
-                    )
-                `)
-                .order('embedding <-> $1', { ascending: true })
-                .limit(5);
-
-            if (projectId) {
-                searchQuery = searchQuery.eq('documents.project_id', projectId);
-            }
-
-            const { data, error } = await searchQuery;
-
-            if (error) throw error;
-
-            return data;
-
-        } catch (error) {
-            console.error('Errore ricerca semantica:', error);
-            return [];
-        }
-    },
-
-    // Genera suggerimenti AI
-    async generateSuggestions(context) {
-        const prompt = this.getPrompt('generate_suggestions', {
-            context: JSON.stringify(context)
-        });
-
-        const endpoint = this.endpoints.generateContent.replace('{model}', this.models.flash);
-        
-        const body = {
-            contents: [{
-                parts: [{ text: prompt }]
-            }],
-            generationConfig: {
-                temperature: 0.8,
-                topK: 50,
-                topP: 0.95,
-                maxOutputTokens: 512,
-            }
-        };
-
-        const response = await this.callGeminiAPI(endpoint, body);
-        
-        const text = response.candidates[0].content.parts[0].text;
-        
-        // Estrai suggerimenti come array
-        const suggestions = text.split('\n')
-            .filter(line => line.trim().startsWith('- '))
-            .map(line => line.replace(/^- /, '').trim());
-
-        return suggestions;
-    },
-
     // Ottieni stato API
     getAPIStatus() {
         return {
             configured: this.apiKey !== null,
+            disabled: this.disabled,
             requestsToday: this.requestsToday,
             requestsRemaining: this.limits.requestsPerDay - this.requestsToday,
-            percentageUsed: (this.requestsToday / this.limits.requestsPerDay * 100).toFixed(0)
+            percentageUsed: Math.round((this.requestsToday / this.limits.requestsPerDay) * 100)
         };
-    },
-
-    // Helper per gestire errori comuni
-    handleAPIError(error) {
-        if (error.message === 'QUOTA_EXCEEDED') {
-            return {
-                retry: false,
-                message: 'Quota API esaurita per oggi',
-                fallback: true
-            };
-        } else if (error.message === 'API Key non valida') {
-            return {
-                retry: false,
-                message: 'API Key non valida. Verifica nella sezione Setup',
-                fallback: false
-            };
-        } else {
-            return {
-                retry: true,
-                message: 'Errore temporaneo. Riprova tra qualche secondo',
-                fallback: true
-            };
-        }
     }
 };
 
