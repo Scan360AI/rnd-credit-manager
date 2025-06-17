@@ -17,8 +17,6 @@ const Auth = {
                 await this.handleSignIn(session);
             } else if (event === 'SIGNED_OUT') {
                 this.handleSignOut();
-            } else if (event === 'TOKEN_REFRESHED') {
-                console.log('Token refreshed');
             }
         });
 
@@ -41,30 +39,23 @@ const Auth = {
     },
 
     // Gestione sign in
-   async handleSignIn(session) {
-    this.currentUser = session.user;
-    
-    // Verifica/crea profilo utente
-    const profile = await this.ensureUserProfile();
-    
-    if (profile) {
-        this.hideAuthScreen();
+    async handleSignIn(session) {
+        this.currentUser = session.user;
         
-        // Inizializza app principale SOLO se non è già inizializzata
-        if (window.App && !window.App.isInitialized) {
-            await window.App.init();
+        // Verifica/crea profilo utente
+        const profile = await this.ensureUserProfile();
+        
+        if (profile) {
+            this.hideAuthScreen();
+            
+            // Inizializza app principale
+            if (window.App && !window.App.isInitialized) {
+                await window.App.init();
+            }
+            
+            showNotification('Accesso effettuato con successo', 'success');
         }
-        
-        // Reindirizza se necessario
-        if (this.redirectUrl) {
-            const url = this.redirectUrl;
-            this.redirectUrl = null;
-            window.location.hash = url;
-        }
-        
-        showNotification('Accesso effettuato con successo', 'success');
-    }
-},
+    },
 
     // Gestione sign out
     handleSignOut() {
@@ -74,9 +65,6 @@ const Auth = {
         // Pulisci dati locali
         this.clearLocalData();
         
-        // Reindirizza a home
-        window.location.hash = '';
-        
         showNotification('Disconnessione effettuata', 'info');
     },
 
@@ -85,7 +73,6 @@ const Auth = {
         if (!this.currentUser) return null;
 
         try {
-            // Controlla se il profilo esiste
             let { data: profile, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -110,18 +97,12 @@ const Auth = {
 
                 if (createError) {
                     console.error('Errore creazione profilo:', createError);
-                    showNotification('Errore creazione profilo', 'error');
                     return null;
                 }
 
                 profile = data;
-            } else if (error) {
-                console.error('Errore recupero profilo:', error);
-                showNotification('Errore recupero profilo', 'error');
-                return null;
             }
 
-            // Salva profilo in memoria
             this.currentUser.profile = profile;
             return profile;
 
@@ -160,59 +141,40 @@ const Auth = {
     },
 
     // Registrazione nuovo utente
+    async signUp(email, password, fullName, companyName) {
+        try {
+            showLoading(true);
 
+            if (!this.validateEmail(email)) {
+                throw new Error('Email non valida');
+            }
 
-            async signUp(email, password, fullName, companyName) {
-    try {
-        showLoading(true);
+            if (password.length < 6) {
+                throw new Error('La password deve essere di almeno 6 caratteri');
+            }
 
-        // Validazione input
-        if (!this.validateEmail(email)) {
-            throw new Error('Email non valida');
-        }
-
-        if (password.length < 6) {
-            throw new Error('La password deve essere di almeno 6 caratteri');
-        }
-
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: {
-                    full_name: fullName,
-                    company_name: companyName
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                        company_name: companyName
+                    }
                 }
-            }
-        });
+            });
 
-        if (error) {
-            if (error.message.includes('User already registered')) {
-                throw new Error('Email già registrata');
+            if (error) {
+                if (error.message.includes('User already registered')) {
+                    throw new Error('Email già registrata');
+                }
+                throw error;
             }
-            throw error;
-        }
 
-        // IMPORTANTE: Mostra sempre il messaggio di conferma
-        showNotification('Registrazione completata! Controlla la tua email per confermare l\'account', 'success');
-        
-        // Torna al form di login
-        setTimeout(() => {
+            showNotification('Registrazione completata! Controlla la tua email per confermare la registrazione', 'success');
             this.toggleAuthForm('login');
-        }, 2000);
-
-        return { success: true, emailConfirmationRequired: true };
-
-    } catch (error) {
-        console.error('Errore registrazione:', error);
-        showNotification(error.message || 'Errore durante la registrazione', 'error');
-        return { success: false, error: error.message };
-    } finally {
-        showLoading(false);
-    }
-},
-
-            return { success: true };
+            
+            return { success: true, emailConfirmationRequired: true };
 
         } catch (error) {
             console.error('Errore registrazione:', error);
@@ -260,67 +222,6 @@ const Auth = {
         } catch (error) {
             console.error('Errore reset password:', error);
             showNotification('Errore invio email reset password', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
-        }
-    },
-
-    // Aggiorna password
-    async updatePassword(newPassword) {
-        try {
-            showLoading(true);
-
-            if (newPassword.length < 6) {
-                throw new Error('La password deve essere di almeno 6 caratteri');
-            }
-
-            const { error } = await supabase.auth.updateUser({
-                password: newPassword
-            });
-
-            if (error) throw error;
-
-            showNotification('Password aggiornata con successo', 'success');
-            return { success: true };
-
-        } catch (error) {
-            console.error('Errore aggiornamento password:', error);
-            showNotification(error.message || 'Errore aggiornamento password', 'error');
-            return { success: false, error: error.message };
-        } finally {
-            showLoading(false);
-        }
-    },
-
-    // Aggiorna profilo utente
-    async updateProfile(updates) {
-        if (!this.currentUser) {
-            showNotification('Utente non autenticato', 'error');
-            return { success: false };
-        }
-
-        try {
-            showLoading(true);
-
-            const { data, error } = await supabase
-                .from('profiles')
-                .update(updates)
-                .eq('id', this.currentUser.id)
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            // Aggiorna profilo in memoria
-            this.currentUser.profile = data;
-
-            showNotification('Profilo aggiornato con successo', 'success');
-            return { success: true, data };
-
-        } catch (error) {
-            console.error('Errore aggiornamento profilo:', error);
-            showNotification('Errore aggiornamento profilo', 'error');
             return { success: false, error: error.message };
         } finally {
             showLoading(false);
@@ -376,22 +277,9 @@ const Auth = {
             });
         }
 
-        // Reset password form
-        const resetForm = document.getElementById('resetForm');
-        if (resetForm && !resetForm.hasListener) {
-            resetForm.hasListener = true;
-            resetForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('resetEmail').value;
-                await this.resetPassword(email);
-            });
-        }
-
         // Toggle forms
         const showSignup = document.getElementById('showSignup');
         const showLogin = document.getElementById('showLogin');
-        const showReset = document.getElementById('showReset');
-        const showLoginFromReset = document.getElementById('showLoginFromReset');
 
         if (showSignup) {
             showSignup.addEventListener('click', (e) => {
@@ -402,20 +290,6 @@ const Auth = {
 
         if (showLogin) {
             showLogin.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggleAuthForm('login');
-            });
-        }
-
-        if (showReset) {
-            showReset.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.toggleAuthForm('reset');
-            });
-        }
-
-        if (showLoginFromReset) {
-            showLoginFromReset.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.toggleAuthForm('login');
             });
@@ -445,7 +319,6 @@ const Auth = {
 
     // Pulisci dati locali
     clearLocalData() {
-        // Mantieni solo API keys e impostazioni non sensibili
         const keysToKeep = ['gemini_api_key', 'ai_disabled', 'theme'];
         const savedData = {};
         
@@ -454,10 +327,8 @@ const Auth = {
             if (value) savedData[key] = value;
         });
 
-        // Clear tutto
         localStorage.clear();
 
-        // Ripristina dati da mantenere
         Object.entries(savedData).forEach(([key, value]) => {
             localStorage.setItem(key, value);
         });
@@ -486,14 +357,6 @@ const Auth = {
             return false;
         }
         return true;
-    }
-};
-
-// Helper functions globali
-window.showLoading = function(show = true) {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-        overlay.style.display = show ? 'flex' : 'none';
     }
 };
 
