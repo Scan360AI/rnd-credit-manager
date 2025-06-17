@@ -223,27 +223,26 @@ const Auth = {
         }
     },
 
-    // Mostra schermata di autenticazione
-    showAuthScreen() {
-        const authScreen = document.getElementById('authScreen');
-        const mainApp = document.getElementById('mainApp');
-        
-        if (authScreen) authScreen.style.display = 'flex';
-        if (mainApp) mainApp.style.display = 'none';
-        
-        // Inizializza form handlers
-        this.initAuthForms();
-    },
+// Mostra schermata di autenticazione
+showAuthScreen() {
+    const authScreen = document.getElementById('authContainer');
+    const mainApp = document.getElementById('appContainer');
+    
+    if (authScreen) authScreen.style.display = 'flex';
+    if (mainApp) mainApp.style.display = 'none';
+    
+    // Inizializza form handlers
+    this.initAuthForms();
+},
 
-    // Nascondi schermata di autenticazione
-    hideAuthScreen() {
-        const authScreen = document.getElementById('authScreen');
-        const mainApp = document.getElementById('mainApp');
-        
-        if (authScreen) authScreen.style.display = 'none';
-        if (mainApp) mainApp.style.display = 'block';
-    },
-
+// Nascondi schermata di autenticazione  
+hideAuthScreen() {
+    const authScreen = document.getElementById('authContainer');
+    const mainApp = document.getElementById('appContainer');
+    
+    if (authScreen) authScreen.style.display = 'none';
+    if (mainApp) mainApp.style.display = 'block';
+},
     // Inizializza i form di autenticazione
     initAuthForms() {
         // Login form
