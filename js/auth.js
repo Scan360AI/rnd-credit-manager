@@ -160,36 +160,7 @@ const Auth = {
     },
 
     // Registrazione nuovo utente
-    async signUp(email, password, fullName, companyName) {
-        try {
-            showLoading(true);
 
-            // Validazione input
-            if (!this.validateEmail(email)) {
-                throw new Error('Email non valida');
-            }
-
-            if (password.length < 6) {
-                throw new Error('La password deve essere di almeno 6 caratteri');
-            }
-
-            const { data, error } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        company_name: companyName
-                    }
-                }
-            });
-
-            if (error) {
-                if (error.message.includes('User already registered')) {
-                    throw new Error('Email già registrata');
-                }
-                throw error;
-            }
 
             async signUp(email, password, fullName, companyName) {
     try {
