@@ -1,0 +1,6 @@
+# Netlify redirects configuration
+# Questo file gestisce i redirect per la tua app
+
+# Gestisce tutti i percorsi non trovati reindirizzandoli a index.html
+# Necessario per Single Page Applications e per gestire i link di Supabase
+/*    /index.html   200

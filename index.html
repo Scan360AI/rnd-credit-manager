@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema professionale per la gestione del credito d'imposta R&S">
+    <title>R&S Credit Manager - Sistema Gestione Credito R&S</title>
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles/app.css">
+    
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-box">
+            <div class="auth-header">
+                <i class="fas fa-flask auth-logo"></i>
+                <h1>R&S Credit Manager</h1>
+                <p>Sistema professionale per la gestione del credito d'imposta R&S</p>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2>Accedi</h2>
+                <form onsubmit="Auth.login(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Accedi
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Non hai un account? 
+                    <a href="#" onclick="Auth.showRegister()">Registrati</a>
+                </p>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form hidden">
+                <h2>Registrati</h2>
+                <form onsubmit="Auth.register(event)">
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyName">Nome Azienda</label>
+                        <input type="text" id="companyName" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyVat">Partita IVA</label>
+                        <input type="text" id="companyVat" required class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-user-plus"></i> Registrati
+                    </button>
+                </form>
+                <p class="auth-switch">
+                    Hai già un account? 
+                    <a href="#" onclick="Auth.showLogin()">Accedi</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="appContainer" class="app-container hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-brand">
+                    <i class="fas fa-flask"></i>
+                    <h1>R&S Credit Manager</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-icon" onclick="App.showNotifications()">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge hidden">0</span>
+                    </button>
+                    <div class="user-menu">
+                        <button class="user-menu-trigger" onclick="App.toggleUserMenu()">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="userEmail"></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="user-menu-dropdown hidden">
+                            <a href="#" onclick="App.showProfile()">
+                                <i class="fas fa-user"></i> Profilo
+                            </a>
+                            <a href="#" onclick="App.showSettings()">
+                                <i class="fas fa-cog"></i> Impostazioni
+                            </a>
+                            <a href="#" onclick="Auth.logout()">
+                                <i class="fas fa-sign-out-alt"></i> Esci
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="app-nav">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="dashboard" onclick="App.switchTab('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-tab" data-tab="employees" onclick="App.switchTab('employees')">
+                    <i class="fas fa-users"></i>
+                    <span>Dipendenti</span>
+                </button>
+                <button class="nav-tab" data-tab="projects" onclick="App.switchTab('projects')">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Progetti</span>
+                </button>
+                <button class="nav-tab" data-tab="timesheet" onclick="App.switchTab('timesheet')">
+                    <i class="fas fa-clock"></i>
+                    <span>Timesheet</span>
+                </button>
+                <button class="nav-tab" data-tab="documents" onclick="App.switchTab('documents')">
+                    <i class="fas fa-folder"></i>
+                    <span>Documenti</span>
+                </button>
+                <button class="nav-tab" data-tab="report" onclick="App.switchTab('report')">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Relazione</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Dashboard Tab -->
+            <div id="dashboardTab" class="tab-content active">
+                <div class="content-header">
+                    <h2>Dashboard</h2>
+                    <button class="btn btn-primary" onclick="App.exportDashboard()">
+                        <i class="fas fa-download"></i> Esporta Report
+                    </button>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <!-- Stats Cards -->
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="totalEmployees">0</h3>
+                                <p>Dipendenti</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="totalProjects">0</h3>
+                                <p>Progetti</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="totalHours">0</h3>
+                                <p>Ore Totali</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-euro-sign"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="totalCredit">€0</h3>
+                                <p>Credito Stimato</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts -->
+                    <div class="chart-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Distribuzione Progetti</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="projectsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activities -->
+                    <div class="activities-container">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Attività Recenti</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="recentActivities" class="activities-list">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employees Tab -->
+            <div id="employeesTab" class="tab-content">
+                <div class="content-header">
+                    <h2>Gestione Dipendenti</h2>
+                    <button class="btn btn-primary" onclick="Employees.showAddModal()">
+                        <i class="fas fa-plus"></i> Aggiungi Dipendente
+                    </button>
+                </div>
+                
+                <!-- Upload Area -->
+                <div class="upload-section">
+                    <div class="upload-area" id="payslipUpload">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Carica Buste Paga</h3>
+                        <p>Trascina qui i file o clicca per selezionare</p>
+                        <p class="upload-hint">Formati supportati: PDF, JPG, PNG • Max 10MB per file</p>
+                        <input type="file" id="payslipInput" multiple accept=".pdf,.jpg,.jpeg,.png" hidden>
+                    </div>
+                    
+                    <div id="uploadProgress" class="upload-progress hidden">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <p class="progress-text">Analisi in corso...</p>
+                    </div>
+                </div>
+                
+                <!-- Employees List -->
+                <div class="employees-section">
+                    <div class="section-header">
+                        <h3>Dipendenti Registrati</h3>
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Cerca dipendenti..." onkeyup="Employees.search(this.value)">
+                        </div>
+                    </div>
+                    <div id="employeesList" class="employees-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Tab -->
+            <div id="projectsTab" class="tab-content">
+                <div class="content-header">
+                    <h2>Progetti R&S</h2>
+                    <button class="btn btn-primary" onclick="Projects.showAddModal()">
+                        <i class="fas fa-plus"></i> Nuovo Progetto
+                    </button>
+                </div>
+                
+                <div class="projects-filters">
+                    <select id="projectYearFilter" onchange="Projects.applyFilters()">
+                        <option value="">Tutti gli anni</option>
+                        <!-- Populated by JS -->
+                    </select>
+                    <select id="projectTypeFilter" onchange="Projects.applyFilters()">
+                        <option value="">Tutte le tipologie</option>
+                        <!-- Populated by JS -->
+                    </select>
+                    <select id="projectStatusFilter" onchange="Projects.applyFilters()">
+                        <option value="">Tutti gli stati</option>
+                        <option value="in_corso">In Corso</option>
+                        <option value="completato">Completato</option>
+                        <option value="sospeso">Sospeso</option>
+                    </select>
+                </div>
+                
+                <div id="projectsList" class="projects-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Timesheet Tab -->
+            <div id="timesheetTab" class="tab-content">
+                <div class="content-header">
+                    <h2>Timesheet e Allocazioni</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="Timesheet.showImport()">
+                            <i class="fas fa-upload"></i> Importa
+                        </button>
+                        <button class="btn btn-primary" onclick="Timesheet.export()">
+                            <i class="fas fa-download"></i> Esporta Excel
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="timesheet-container">
+                    <div class="timesheet-controls">
+                        <button class="btn btn-sm" onclick="Timesheet.expandAll()">
+                            <i class="fas fa-expand-alt"></i> Espandi tutto
+                        </button>
+                        <button class="btn btn-sm" onclick="Timesheet.collapseAll()">
+                            <i class="fas fa-compress-alt"></i> Comprimi tutto
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="Timesheet.resetAll()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                    
+                    <div id="timesheetTable" class="timesheet-table">
+                        <!-- Populated by JS -->
+                    </div>
+                    
+                    <div id="timesheetSummary" class="timesheet-summary">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Tab -->
+            <div id="documentsTab" class="tab-content">
+                <div class="content-header">
+                    <h2>Documenti e Fatture</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="Documents.showSearch()">
+                            <i class="fas fa-search"></i> Cerca
+                        </button>
+                        <button class="btn btn-primary" onclick="Documents.showUpload()">
+                            <i class="fas fa-plus"></i> Carica Documento
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="documents-container">
+                    <!-- Invoices Section -->
+                    <div class="documents-section">
+                        <h3>Fatture R&S</h3>
+                        <div class="upload-area small" id="invoiceUpload">
+                            <i class="fas fa-file-invoice"></i>
+                            <p>Carica fatture</p>
+                            <input type="file" id="invoiceInput" multiple accept=".pdf,.jpg,.jpeg,.png" hidden>
+                        </div>
+                        <div id="invoicesList" class="documents-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Other Documents Section -->
+                    <div class="documents-section">
+                        <h3>Altri Documenti</h3>
+                        <div class="document-categories">
+                            <button class="category-btn active" onclick="Documents.filterByType('all')">
+                                Tutti
+                            </button>
+                            <button class="category-btn" onclick="Documents.filterByType('contract')">
+                                Contratti
+                            </button>
+                            <button class="category-btn" onclick="Documents.filterByType('patent')">
+                                Brevetti
+                            </button>
+                            <button class="category-btn" onclick="Documents.filterByType('technical')">
+                                Relazioni
+                            </button>
+                        </div>
+                        <div id="otherDocsList" class="documents-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div id="reportTab" class="tab-content">
+                <div class="content-header">
+                    <h2>Relazione Tecnica</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="Report.preview()">
+                            <i class="fas fa-eye"></i> Anteprima
+                        </button>
+                        <button class="btn btn-primary" onclick="Report.export()">
+                            <i class="fas fa-file-pdf"></i> Esporta PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="report-container">
+                    <!-- AI Assistant -->
+                    <div class="ai-assistant-card">
+                        <div class="ai-header">
+                            <i class="fas fa-robot"></i>
+                            <h3>Assistente AI</h3>
+                            <span class="ai-status" id="aiStatus">
+                                <i class="fas fa-circle"></i> Pronto
+                            </span>
+                        </div>
+                        <div class="ai-body">
+                            <p>L'assistente AI può aiutarti a generare contenuti basandosi su:</p>
+                            <ul>
+                                <li>Documenti caricati nel progetto</li>
+                                <li>Knowledge base normativa</li>
+                                <li>Best practices di settore</li>
+                            </ul>
+                            <button class="btn btn-ai" onclick="Report.showAISettings()">
+                                <i class="fas fa-cog"></i> Configura AI
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Report Sections -->
+                    <div class="report-sections">
+                        <!-- Project Selection -->
+                        <div class="report-section">
+                            <label>Seleziona Progetto</label>
+                            <select id="reportProject" onchange="Report.loadProject(this.value)">
+                                <option value="">-- Seleziona --</option>
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+                        
+                        <!-- Description Section -->
+                        <div class="report-section">
+                            <div class="section-header">
+                                <label>Descrizione del Progetto</label>
+                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('descrizione')">
+                                    <i class="fas fa-magic"></i> Genera con AI
+                                </button>
+                            </div>
+                            <textarea id="reportDescrizione" rows="10" 
+                                placeholder="Descrivi il progetto, gli obiettivi, il team coinvolto..."></textarea>
+                            <div class="section-suggestions" id="descrizioneSuggestions">
+                                <!-- AI suggestions -->
+                            </div>
+                        </div>
+                        
+                        <!-- Technical Uncertainties -->
+                        <div class="report-section">
+                            <div class="section-header">
+                                <label>Incertezze Scientifiche/Tecnologiche</label>
+                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('incertezze')">
+                                    <i class="fas fa-magic"></i> Genera con AI
+                                </button>
+                            </div>
+                            <textarea id="reportIncertezze" rows="10" 
+                                placeholder="Quali sfide tecnologiche hanno richiesto attività di R&S?"></textarea>
+                        </div>
+                        
+                        <!-- Innovation Elements -->
+                        <div class="report-section">
+                            <div class="section-header">
+                                <label>Elementi di Innovazione</label>
+                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('innovazione')">
+                                    <i class="fas fa-magic"></i> Genera con AI
+                                </button>
+                            </div>
+                            <textarea id="reportInnovazione" rows="10" 
+                                placeholder="Cosa distingue il progetto dalle soluzioni esistenti?"></textarea>
+                        </div>
+                        
+                        <!-- Results -->
+                        <div class="report-section">
+                            <div class="section-header">
+                                <label>Risultati Ottenuti</label>
+                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('risultati')">
+                                    <i class="fas fa-magic"></i> Genera con AI
+                                </button>
+                            </div>
+                            <textarea id="reportRisultati" rows="10" 
+                                placeholder="Quali risultati concreti sono stati ottenuti?"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Credit Summary -->
+                    <div class="credit-summary">
+                        <h3>Riepilogo Credito R&S</h3>
+                        <div id="creditSummary" class="credit-cards">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modalContainer"></div>
+
+    <!-- Notifications -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ai-manager.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/timesheet.js"></script>
+    <script src="js/documents.js"></script>
+    <script src="js/report.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
