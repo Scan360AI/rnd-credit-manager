@@ -99,10 +99,11 @@ const DataExtractor = {
             const base64 = await this.fileToBase64(file);
             const mimeType = file.type || 'image/jpeg';
             
-            // Controlla se AI è disabilitata
-            if (document.getElementById('disableAI')?.checked || !AIManager.apiKey) {
-                return this.getManualTemplate(file.name);
-            }
+      // Controlla se AI è disponibile
+if (!AIManager.isAvailable()) {
+    console.log('AI non disponibile, modalità manuale');
+    return [this.getManualTemplate(file.name)];
+}
             
             // Analizza con AI
             if (mimeType === 'application/pdf') {
