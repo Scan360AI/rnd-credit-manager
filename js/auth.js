@@ -41,30 +41,30 @@ const Auth = {
     },
 
     // Gestione sign in
-    async handleSignIn(session) {
-        this.currentUser = session.user;
+   async handleSignIn(session) {
+    this.currentUser = session.user;
+    
+    // Verifica/crea profilo utente
+    const profile = await this.ensureUserProfile();
+    
+    if (profile) {
+        this.hideAuthScreen();
         
-        // Verifica/crea profilo utente
-        const profile = await this.ensureUserProfile();
-        
-        if (profile) {
-            this.hideAuthScreen();
-            
-            // Inizializza app principale
-            if (window.App) {
-                await window.App.init();
-            }
-            
-            // Reindirizza se necessario
-            if (this.redirectUrl) {
-                const url = this.redirectUrl;
-                this.redirectUrl = null;
-                window.location.hash = url;
-            }
-            
-            showNotification('Accesso effettuato con successo', 'success');
+        // Inizializza app principale SOLO se non è già inizializzata
+        if (window.App && !window.App.isInitialized) {
+            await window.App.init();
         }
-    },
+        
+        // Reindirizza se necessario
+        if (this.redirectUrl) {
+            const url = this.redirectUrl;
+            this.redirectUrl = null;
+            window.location.hash = url;
+        }
+        
+        showNotification('Accesso effettuato con successo', 'success');
+    }
+},
 
     // Gestione sign out
     handleSignOut() {
@@ -191,11 +191,55 @@ const Auth = {
                 throw error;
             }
 
-            // Se è richiesta conferma email
-            if (data.user && !data.user.confirmed_at) {
-                showNotification('Controlla la tua email per confermare la registrazione', 'info');
-                return { success: true, emailConfirmationRequired: true };
+            async signUp(email, password, fullName, companyName) {
+    try {
+        showLoading(true);
+
+        // Validazione input
+        if (!this.validateEmail(email)) {
+            throw new Error('Email non valida');
+        }
+
+        if (password.length < 6) {
+            throw new Error('La password deve essere di almeno 6 caratteri');
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    company_name: companyName
+                }
             }
+        });
+
+        if (error) {
+            if (error.message.includes('User already registered')) {
+                throw new Error('Email già registrata');
+            }
+            throw error;
+        }
+
+        // IMPORTANTE: Mostra sempre il messaggio di conferma
+        showNotification('Registrazione completata! Controlla la tua email per confermare l\'account', 'success');
+        
+        // Torna al form di login
+        setTimeout(() => {
+            this.toggleAuthForm('login');
+        }, 2000);
+
+        return { success: true, emailConfirmationRequired: true };
+
+    } catch (error) {
+        console.error('Errore registrazione:', error);
+        showNotification(error.message || 'Errore durante la registrazione', 'error');
+        return { success: false, error: error.message };
+    } finally {
+        showLoading(false);
+    }
+},
 
             return { success: true };
 
