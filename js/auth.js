@@ -38,19 +38,21 @@ const Auth = {
         }
     },
 
-    // Gestione sign in
-    async handleSignIn(session) {
-        this.currentUser = session.user;
+// Gestione sign in
+async handleSignIn(session) {
+    this.currentUser = session.user;
+    
+    // Verifica/crea profilo utente
+    const profile = await this.ensureUserProfile();
+    
+    if (profile) {
+        // NASCONDI LOGIN E MOSTRA APP
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'block';
         
-        // Verifica/crea profilo utente
-        const profile = await this.ensureUserProfile();
-        
-        if (profile) {
-            this.hideAuthScreen();
-            
-            showNotification('Accesso effettuato con successo', 'success');
-        }
-    },
+        showNotification('Accesso effettuato con successo', 'success');
+    }
+},
 
     // Gestione sign out
     handleSignOut() {
