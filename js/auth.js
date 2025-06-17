@@ -48,11 +48,6 @@ const Auth = {
         if (profile) {
             this.hideAuthScreen();
             
-            // Inizializza app principale
-            if (window.App && !window.App.isInitialized) {
-                await window.App.init();
-            }
-            
             showNotification('Accesso effettuato con successo', 'success');
         }
     },
