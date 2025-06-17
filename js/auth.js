@@ -45,12 +45,24 @@ async handleSignIn(session) {
     // Verifica/crea profilo utente
     const profile = await this.ensureUserProfile();
     
-    if (profile) {
-        // NASCONDI LOGIN E MOSTRA APP
-        document.getElementById('authContainer').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'block';
-        
-        showNotification('Accesso effettuato con successo', 'success');
+   if (profile) {
+    // Forza il cambio schermata
+    const authContainer = document.getElementById('authContainer');
+    const appContainer = document.getElementById('appContainer');
+    
+    if (authContainer) authContainer.style.display = 'none';
+    if (appContainer) {
+        appContainer.style.display = 'block';
+        appContainer.classList.remove('hidden');
+    }
+    
+    showNotification('Accesso effettuato con successo', 'success');
+    
+    // Inizializza app se necessario
+    if (window.App && !window.App.isInitialized) {
+        setTimeout(() => window.App.init(), 100);
+    }
+}
     }
 },
 
