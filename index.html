@@ -18,14 +18,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Styles -->
-<link rel="stylesheet" href="./styles/app.css">
+    <link rel="stylesheet" href="./styles/app.css">
     
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Auth Container -->
-<div id="authScreen" class="auth-container">
+    <div id="authScreen" class="auth-container">
         <div class="auth-box">
             <div class="auth-header">
                 <i class="fas fa-flask auth-logo"></i>
@@ -36,7 +36,7 @@
             <!-- Login Form -->
             <div id="loginForm" class="auth-form">
                 <h2>Accedi</h2>
-<form id="loginFormElement">
+                <form id="loginFormElement">
                     <div class="form-group">
                         <label for="loginEmail">Email</label>
                         <input type="email" id="loginEmail" required class="form-control">
@@ -51,29 +51,29 @@
                 </form>
                 <p class="auth-switch">
                     Non hai un account? 
-<a href="#" onclick="showRegister(); return false;">Registrati</a>
+                    <a href="#" id="showSignup">Registrati</a>
                 </p>
             </div>
             
             <!-- Register Form -->
-            <div id="registerForm" class="auth-form hidden">
+            <div id="signupForm" class="auth-form hidden">
                 <h2>Registrati</h2>
-<form id="registerFormElement">
+                <form id="signupFormElement">
                     <div class="form-group">
-                        <label for="registerEmail">Email</label>
-                        <input type="email" id="registerEmail" required class="form-control">
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" required class="form-control">
                     </div>
                     <div class="form-group">
-                        <label for="registerPassword">Password</label>
-                        <input type="password" id="registerPassword" required class="form-control">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" required class="form-control">
                     </div>
                     <div class="form-group">
-                        <label for="companyName">Nome Azienda</label>
-                        <input type="text" id="companyName" required class="form-control">
+                        <label for="signupName">Nome Completo</label>
+                        <input type="text" id="signupName" required class="form-control">
                     </div>
                     <div class="form-group">
-                        <label for="companyVat">Partita IVA</label>
-                        <input type="text" id="companyVat" required class="form-control">
+                        <label for="signupCompany">Nome Azienda</label>
+                        <input type="text" id="signupCompany" required class="form-control">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">
                         <i class="fas fa-user-plus"></i> Registrati
@@ -81,14 +81,14 @@
                 </form>
                 <p class="auth-switch">
                     Hai già un account? 
-                    <a href="#" onclick="Auth.showLogin()">Accedi</a>
+                    <a href="#" id="showLogin">Accedi</a>
                 </p>
             </div>
         </div>
     </div>
 
     <!-- Main App Container -->
-<div id="mainApp" class="app-container hidden">
+    <div id="mainApp" class="app-container hidden">
         <!-- Header -->
         <header class="app-header">
             <div class="header-content">
@@ -114,7 +114,7 @@
                             <a href="#" onclick="App.showSettings()">
                                 <i class="fas fa-cog"></i> Impostazioni
                             </a>
-                            <a href="#" onclick="Auth.logout()">
+                            <a href="#" onclick="Auth.signOut()">
                                 <i class="fas fa-sign-out-alt"></i> Esci
                             </a>
                         </div>
@@ -156,7 +156,7 @@
         <!-- Main Content -->
         <main class="app-main">
             <!-- Dashboard Tab -->
-            <div id="dashboardTab" class="tab-content active">
+            <div id="dashboard" class="tab-content active">
                 <div class="content-header">
                     <h2>Dashboard</h2>
                     <button class="btn btn-primary" onclick="App.exportDashboard()">
@@ -164,80 +164,16 @@
                     </button>
                 </div>
                 
-                <div class="dashboard-grid">
-                    <!-- Stats Cards -->
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="totalEmployees">0</h3>
-                                <p>Dipendenti</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-project-diagram"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="totalProjects">0</h3>
-                                <p>Progetti</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="totalHours">0</h3>
-                                <p>Ore Totali</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-euro-sign"></i>
-                            </div>
-                            <div class="stat-content">
-                                <h3 id="totalCredit">€0</h3>
-                                <p>Credito Stimato</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Charts -->
-                    <div class="chart-container">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Distribuzione Progetti</h3>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="projectsChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Recent Activities -->
-                    <div class="activities-container">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>Attività Recenti</h3>
-                            </div>
-                            <div class="card-body">
-                                <div id="recentActivities" class="activities-list">
-                                    <!-- Populated by JS -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div id="dashboardContent">
+                    <!-- Dashboard content will be rendered here -->
                 </div>
             </div>
 
             <!-- Employees Tab -->
-            <div id="employeesTab" class="tab-content">
+            <div id="employees" class="tab-content">
                 <div class="content-header">
                     <h2>Gestione Dipendenti</h2>
-                    <button class="btn btn-primary" onclick="Employees.showAddModal()">
+                    <button class="btn btn-primary" onclick="EmployeesManager.showAddModal()">
                         <i class="fas fa-plus"></i> Aggiungi Dipendente
                     </button>
                 </div>
@@ -266,7 +202,7 @@
                         <h3>Dipendenti Registrati</h3>
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Cerca dipendenti..." onkeyup="Employees.search(this.value)">
+                            <input type="text" placeholder="Cerca dipendenti..." onkeyup="EmployeesManager.search(this.value)">
                         </div>
                     </div>
                     <div id="employeesList" class="employees-grid">
@@ -276,29 +212,12 @@
             </div>
 
             <!-- Projects Tab -->
-            <div id="projectsTab" class="tab-content">
+            <div id="projects" class="tab-content">
                 <div class="content-header">
                     <h2>Progetti R&S</h2>
-                    <button class="btn btn-primary" onclick="Projects.showAddModal()">
+                    <button class="btn btn-primary" onclick="ProjectsManager.addProject()">
                         <i class="fas fa-plus"></i> Nuovo Progetto
                     </button>
-                </div>
-                
-                <div class="projects-filters">
-                    <select id="projectYearFilter" onchange="Projects.applyFilters()">
-                        <option value="">Tutti gli anni</option>
-                        <!-- Populated by JS -->
-                    </select>
-                    <select id="projectTypeFilter" onchange="Projects.applyFilters()">
-                        <option value="">Tutte le tipologie</option>
-                        <!-- Populated by JS -->
-                    </select>
-                    <select id="projectStatusFilter" onchange="Projects.applyFilters()">
-                        <option value="">Tutti gli stati</option>
-                        <option value="in_corso">In Corso</option>
-                        <option value="completato">Completato</option>
-                        <option value="sospeso">Sospeso</option>
-                    </select>
                 </div>
                 
                 <div id="projectsList" class="projects-grid">
@@ -307,51 +226,39 @@
             </div>
 
             <!-- Timesheet Tab -->
-            <div id="timesheetTab" class="tab-content">
+            <div id="timesheet" class="tab-content">
                 <div class="content-header">
                     <h2>Timesheet e Allocazioni</h2>
                     <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="Timesheet.showImport()">
+                        <button class="btn btn-secondary" onclick="TimesheetManager.showImport()">
                             <i class="fas fa-upload"></i> Importa
                         </button>
-                        <button class="btn btn-primary" onclick="Timesheet.export()">
+                        <button class="btn btn-primary" onclick="TimesheetManager.export()">
                             <i class="fas fa-download"></i> Esporta Excel
                         </button>
                     </div>
                 </div>
                 
                 <div class="timesheet-container">
-                    <div class="timesheet-controls">
-                        <button class="btn btn-sm" onclick="Timesheet.expandAll()">
-                            <i class="fas fa-expand-alt"></i> Espandi tutto
-                        </button>
-                        <button class="btn btn-sm" onclick="Timesheet.collapseAll()">
-                            <i class="fas fa-compress-alt"></i> Comprimi tutto
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="Timesheet.resetAll()">
-                            <i class="fas fa-undo"></i> Reset
-                        </button>
-                    </div>
-                    
                     <div id="timesheetTable" class="timesheet-table">
                         <!-- Populated by JS -->
                     </div>
                     
-                    <div id="timesheetSummary" class="timesheet-summary">
+                    <div id="projectSummary" class="timesheet-summary">
                         <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
             <!-- Documents Tab -->
-            <div id="documentsTab" class="tab-content">
+            <div id="documents" class="tab-content">
                 <div class="content-header">
                     <h2>Documenti e Fatture</h2>
                     <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="Documents.showSearch()">
+                        <button class="btn btn-secondary" onclick="DocumentsManager.showSearch()">
                             <i class="fas fa-search"></i> Cerca
                         </button>
-                        <button class="btn btn-primary" onclick="Documents.showUpload()">
+                        <button class="btn btn-primary" onclick="DocumentsManager.showUpload()">
                             <i class="fas fa-plus"></i> Carica Documento
                         </button>
                     </div>
@@ -374,19 +281,10 @@
                     <!-- Other Documents Section -->
                     <div class="documents-section">
                         <h3>Altri Documenti</h3>
-                        <div class="document-categories">
-                            <button class="category-btn active" onclick="Documents.filterByType('all')">
-                                Tutti
-                            </button>
-                            <button class="category-btn" onclick="Documents.filterByType('contract')">
-                                Contratti
-                            </button>
-                            <button class="category-btn" onclick="Documents.filterByType('patent')">
-                                Brevetti
-                            </button>
-                            <button class="category-btn" onclick="Documents.filterByType('technical')">
-                                Relazioni
-                            </button>
+                        <div class="upload-area small" id="otherDocsUpload">
+                            <i class="fas fa-file"></i>
+                            <p>Carica documenti</p>
+                            <input type="file" id="otherDocsInput" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" hidden>
                         </div>
                         <div id="otherDocsList" class="documents-list">
                             <!-- Populated by JS -->
@@ -396,14 +294,14 @@
             </div>
 
             <!-- Report Tab -->
-            <div id="reportTab" class="tab-content">
+            <div id="report" class="tab-content">
                 <div class="content-header">
                     <h2>Relazione Tecnica</h2>
                     <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="Report.preview()">
+                        <button class="btn btn-secondary" onclick="ReportManager.preview()">
                             <i class="fas fa-eye"></i> Anteprima
                         </button>
-                        <button class="btn btn-primary" onclick="Report.export()">
+                        <button class="btn btn-primary" onclick="ReportManager.exportReport()">
                             <i class="fas fa-file-pdf"></i> Esporta PDF
                         </button>
                     </div>
@@ -426,7 +324,7 @@
                                 <li>Knowledge base normativa</li>
                                 <li>Best practices di settore</li>
                             </ul>
-                            <button class="btn btn-ai" onclick="Report.showAISettings()">
+                            <button class="btn btn-ai" onclick="ReportManager.showAISettings()">
                                 <i class="fas fa-cog"></i> Configura AI
                             </button>
                         </div>
@@ -434,35 +332,23 @@
                     
                     <!-- Report Sections -->
                     <div class="report-sections">
-                        <!-- Project Selection -->
-                        <div class="report-section">
-                            <label>Seleziona Progetto</label>
-                            <select id="reportProject" onchange="Report.loadProject(this.value)">
-                                <option value="">-- Seleziona --</option>
-                                <!-- Populated by JS -->
-                            </select>
-                        </div>
-                        
                         <!-- Description Section -->
                         <div class="report-section">
                             <div class="section-header">
                                 <label>Descrizione del Progetto</label>
-                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('descrizione')">
+                                <button class="btn btn-ai btn-sm" onclick="ReportManager.generateAIContent('descrizione')">
                                     <i class="fas fa-magic"></i> Genera con AI
                                 </button>
                             </div>
                             <textarea id="reportDescrizione" rows="10" 
                                 placeholder="Descrivi il progetto, gli obiettivi, il team coinvolto..."></textarea>
-                            <div class="section-suggestions" id="descrizioneSuggestions">
-                                <!-- AI suggestions -->
-                            </div>
                         </div>
                         
                         <!-- Technical Uncertainties -->
                         <div class="report-section">
                             <div class="section-header">
                                 <label>Incertezze Scientifiche/Tecnologiche</label>
-                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('incertezze')">
+                                <button class="btn btn-ai btn-sm" onclick="ReportManager.generateAIContent('incertezze')">
                                     <i class="fas fa-magic"></i> Genera con AI
                                 </button>
                             </div>
@@ -474,7 +360,7 @@
                         <div class="report-section">
                             <div class="section-header">
                                 <label>Elementi di Innovazione</label>
-                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('innovazione')">
+                                <button class="btn btn-ai btn-sm" onclick="ReportManager.generateAIContent('innovazione')">
                                     <i class="fas fa-magic"></i> Genera con AI
                                 </button>
                             </div>
@@ -486,7 +372,7 @@
                         <div class="report-section">
                             <div class="section-header">
                                 <label>Risultati Ottenuti</label>
-                                <button class="btn btn-ai btn-sm" onclick="Report.generateSection('risultati')">
+                                <button class="btn btn-ai btn-sm" onclick="ReportManager.generateAIContent('risultati')">
                                     <i class="fas fa-magic"></i> Genera con AI
                                 </button>
                             </div>
@@ -507,60 +393,47 @@
         </main>
     </div>
 
-    <!-- Modals -->
-    <div id="modalContainer"></div>
+    <!-- Modal Container -->
+    <div id="modal" class="modal-backdrop hidden" onclick="App.closeModalOnBackdrop(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal Title</h3>
+                <button class="modal-close" onclick="App.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modalBody" class="modal-body">
+                <!-- Modal content -->
+            </div>
+        </div>
+    </div>
 
-    <!-- Notifications -->
-    <div id="notificationContainer" class="notification-container"></div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Caricamento...</p>
+        </div>
+    </div>
 
     <!-- Scripts -->
-<script src="./js/config.js"></script>
-<script src="./js/supabase-client.js"></script>
-<script src="./js/auth.js"></script>
-<script src="./js/ai-manager.js"></script>
-<script src="./js/utils.js"></script>
-<script src="./js/employees.js"></script>
-<script src="./js/projects.js"></script>
-<script src="./js/timesheet.js"></script>
-<script src="./js/documents.js"></script>
-<script src="./js/report.js"></script>
-<script src="./js/app.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/supabase-client.js"></script>
+    <script src="./js/auth.js"></script>
+    <script src="./js/ai-manager.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/employees.js"></script>
+    <script src="./js/projects.js"></script>
+    <script src="./js/timesheet.js"></script>
+    <script src="./js/documents.js"></script>
+    <script src="./js/report.js"></script>
+    <script src="./js/app.js"></script>
 
-<script>
-// Fix per auth form
-window.addEventListener('DOMContentLoaded', () => {
-    const loginFormEl = document.getElementById('loginFormElement');
-    if (loginFormEl) {
-        loginFormEl.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            await Auth.signIn(email, password);
-        });
-    }
-
-    const registerFormEl = document.getElementById('registerFormElement');
-    if (registerFormEl) {
-        registerFormEl.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const companyName = document.getElementById('companyName').value;
-            const companyVat = document.getElementById('companyVat').value;
-            await Auth.signUp(email, password, '', companyName);
-        });
-    }
-});
-
-function showRegister() {
-    document.getElementById('loginForm').classList.add('hidden');
-    document.getElementById('registerForm').classList.remove('hidden');
-}
-
-function showLogin() {
-    document.getElementById('loginForm').classList.remove('hidden');
-    document.getElementById('registerForm').classList.add('hidden');
-}
-</script>
+    <script>
+    // Inizializzazione app
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM ready, starting auth...');
+    });
+    </script>
 </body>
 </html>
